@@ -3,7 +3,7 @@ import openai
 import json
 import numpy as np
 from numpy.linalg import norm
-import re
+import requests
 from time import time,sleep
 from uuid import uuid4
 import datetime
@@ -39,15 +39,30 @@ def gpt3_embedding(content, engine='text-embedding-ada-002'):
     vector = response['data'][0]['embedding']  # this is a normal list
     return vector
 
+import requests
 
-def chatgpt_completion(messages, model="gpt-3.5-turbo"):
-    response = openai.ChatCompletion.create(model=model, messages=messages)
-    text = response['choices'][0]['message']['content']
+def chatgpt_completion(conversation, model="gpt-3.5-turbo"):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {openai.api_key}"
+    }
+    data = {
+        "model": model,
+        "messages": conversation
+    }
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response_json = response.json()
+
+    if response.status_code != 200:
+        raise Exception(f"OpenAI API returned status code {response.status_code}: {response_json}")
+
+    text = response_json['choices'][0]['message']['content']
     filename = 'chat_%s_muse.txt' % time()
     if not os.path.exists('chat_logs'):
         os.makedirs('chat_logs')
     save_file('chat_logs/%s' % filename, text)
     return text
+
 
 
 def gpt3_completion(prompt, engine='text-davinci-003', temp=0.0, top_p=1.0, tokens=400, freq_pen=0.0, pres_pen=0.0, stop=['USER:', 'RAVEN:']):
